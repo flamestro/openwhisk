@@ -105,6 +105,20 @@
                     "attachmentName": "codefile",
                     "attachmentType": "text/plain"
                 }
+            },
+            {
+                "kind": "pythontracing:3",
+                "default": false,
+                "image": {
+                    "prefix": "flamestro",
+                    "name": "python3action",
+                    "tag": "latest"
+                },
+                "deprecated": false,
+                "attached": {
+                    "attachmentName": "codefile",
+                    "attachmentType": "text/plain"
+                }
             }
         ],
         "swift": [
