@@ -725,7 +725,6 @@ class ContainerProxy(factory: (TransactionId,
       "parent_span_id" -> parent_span_id.toJson,
       "sampling_rate" -> sampled_trace.toJson)
 
-
     // if the action requests the api key to be injected into the action context, add it here;
     // treat a missing annotation as requesting the api key for backward compatibility
     val authEnvironment = {
