@@ -688,12 +688,43 @@ class ContainerProxy(factory: (TransactionId,
 
     val (env, parameters) = ContainerProxy.partitionArguments(unlockedContent, job.msg.initArgs)
 
+    //val trace_context = (for {
+    //  map <- job.msg.traceContext.iterator
+    //  (k, v) <- map.iterator
+    //} yield s"$k=$v").mkString(",")
+
+    val parent_span_id = (for {
+      map <- job.msg.traceContext.iterator
+      ("X-B3-ParentSpanId", v) <- map.iterator
+    } yield s"$v").mkString("")
+
+    val sampled_trace = (for {
+      map <- job.msg.traceContext.iterator
+      ("X-B3-Sampled", v) <- map.iterator
+    } yield s"$v").mkString("")
+
+    val span_id = (for {
+      map <- job.msg.traceContext.iterator
+      ("X-B3-SpanId", v) <- map.iterator
+    } yield s"$v").mkString("")
+
+    val trace_id = (for {
+      map <- job.msg.traceContext.iterator
+      ("X-B3-TraceId", v) <- map.iterator
+    } yield s"$v").mkString("")
+
     val environment = Map(
       "namespace" -> job.msg.user.namespace.name.toJson,
       "action_name" -> job.msg.action.qualifiedNameWithLeadingSlash.toJson,
       "action_version" -> job.msg.action.version.toJson,
       "activation_id" -> job.msg.activationId.toString.toJson,
-      "transaction_id" -> job.msg.transid.id.toJson)
+      "transaction_id" -> job.msg.transid.id.toJson,
+      //"trace_context" -> trace_context.toJson,
+      "trace_id" -> trace_id.toJson,
+      "span_id" -> span_id.toJson,
+      "parent_span_id" -> parent_span_id.toJson,
+      "sampling_rate" -> sampled_trace.toJson)
+
 
     // if the action requests the api key to be injected into the action context, add it here;
     // treat a missing annotation as requesting the api key for backward compatibility
