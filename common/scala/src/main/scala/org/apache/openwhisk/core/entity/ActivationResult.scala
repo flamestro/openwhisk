@@ -17,14 +17,13 @@
 
 package org.apache.openwhisk.core.entity
 
+import akka.event.Logging.InfoLevel
+
 import scala.util.Try
-
 import akka.http.scaladsl.model.StatusCodes.OK
-
 import spray.json._
 import spray.json.DefaultJsonProtocol
-
-import org.apache.openwhisk.common.Logging
+import org.apache.openwhisk.common.{Logging, LoggingMarkers, TransactionId}
 import org.apache.openwhisk.http.Messages._
 
 protected[core] case class ActivationResponse private (statusCode: Int,
@@ -159,8 +158,13 @@ protected[core] object ActivationResponse extends DefaultJsonProtocol {
    * @return appropriate ActivationResponse representing initialization error
    */
   protected[core] def processInitResponseContent(response: Either[ContainerConnectionError, ContainerResponse],
-                                                 logger: Logging): ActivationResponse = {
+                                                 logger: Logging)(implicit transid: TransactionId): ActivationResponse = {
     require(response.isLeft || !response.exists(_.ok), s"should not interpret init response when status code is OK")
+    val start = transid.started(
+      this,
+      LoggingMarkers.INVOKER_ACTIVATION_INIT_INTERPRET,
+      s"Interpreting ACTIVATION_INIT ${transid.id}",
+      logLevel = InfoLevel)(logging = logger)
     response match {
       case Right(ContainerResponse(code, str, truncated)) =>
         val sizeOpt = Option(str).map(_.length)
@@ -171,20 +175,25 @@ protected[core] object ActivationResponse extends DefaultJsonProtocol {
                 // If the response is a JSON object container an error field, accept it as the response error.
                 val errorOpt = fields.get(ERROR_FIELD)
                 val errorContent = errorOpt getOrElse invalidInitResponse(str).toJson
+                transid.failed(this, start, s"initializiation failed with $errorContent")(logging = logger)
                 developerError(errorContent, sizeOpt)
               case _ =>
+                transid.failed(this, start, s"initializiation failed with invalidInitResponse")(logging = logger)
                 developerError(invalidInitResponse(str), sizeOpt)
             }
 
           case Some((length, maxlength)) =>
+            transid.failed(this, start, s"initializiation failed with developerError")(logging = logger)
             developerError(truncatedResponse(str, length, maxlength), Some(length.toBytes.toInt))
         }
 
       case Left(_: MemoryExhausted) =>
+        transid.failed(this, start, s"initializiation failed with memoryExhausted")(logging = logger)
         developerError(memoryExhausted)
 
       case Left(e) =>
         // This indicates a terminal failure in the container (it exited prematurely).
+        transid.failed(this, start, s"initializiation failed with abnormalInitialization")(logging = logger)
         developerError(abnormalInitialization)
     }
   }
@@ -196,7 +205,12 @@ protected[core] object ActivationResponse extends DefaultJsonProtocol {
    * @return appropriate ActivationResponse representing run result
    */
   protected[core] def processRunResponseContent(response: Either[ContainerConnectionError, ContainerResponse],
-                                                logger: Logging): ActivationResponse = {
+                                                logger: Logging)(implicit transid: TransactionId): ActivationResponse = {
+    val start = transid.started(
+      this,
+      LoggingMarkers.INVOKER_ACTIVATION_RUN_INTERPRET,
+      s"Interpreting ACTIVATION_RUN ${transid.id}",
+      logLevel = InfoLevel)(logging = logger)
     response match {
       case Right(res @ ContainerResponse(_, str, truncated)) =>
         truncated match {

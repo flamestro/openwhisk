@@ -136,6 +136,12 @@ trait Container {
         if (result.ok) {
           Future.successful(result.interval)
         } else if (result.interval.duration >= timeout) {
+          val start = transid.started(
+            this,
+            LoggingMarkers.INVOKER_ACTIVATION_INIT_INTERPRET,
+            s"Interpreting ${transid.id}",
+            logLevel = InfoLevel)
+          transid.failed(this, start, "initializiation failed due to timeoutexceeded")
           Future.failed(
             InitializationError(
               result.interval,
