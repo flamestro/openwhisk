@@ -223,37 +223,49 @@ protected[core] object ActivationResponse extends DefaultJsonProtocol {
 
                 if (res.okStatus) {
                   errorOpt map { error =>
+                    transid.failed(this, start, s"Run failed with applicationError $error")(logging = logger)
                     applicationError(error, sizeOpt)
                   } getOrElse {
                     // The happy path.
+                    transid.finished(
+                      this,
+                      start,
+                      s"run success",
+                      logLevel = InfoLevel)(logger)
                     success(Some(result), sizeOpt)
                   }
                 } else {
                   // Any non-200 code is treated as a container failure. We still need to check whether
                   // there was a useful error message in there.
                   val errorContent = errorOpt getOrElse invalidRunResponse(str).toJson
+                  transid.failed(this, start, s"Run failed with applicationError $errorContent")(logging = logger)
                   developerError(errorContent, sizeOpt)
                 }
 
               case scala.util.Success(notAnObj) =>
                 // This should affect only blackbox containers, since our own containers should already test for that.
+                transid.failed(this, start, s"Run failed with invalidRunResponse (notAnObj)")(logging = logger)
                 developerError(invalidRunResponse(str), sizeOpt)
 
               case scala.util.Failure(t) =>
                 // This should affect only blackbox containers, since our own containers should already test for that.
                 logger.warn(this, s"response did not json parse: '$str' led to $t")
+                transid.failed(this, start, s"Run failed with invalidRunResponse")(logging = logger)
                 developerError(invalidRunResponse(str), sizeOpt)
             }
 
           case Some((length, maxlength)) =>
+            transid.failed(this, start, s"Run failed with applicationError ${JsString(truncatedResponse(str, length, maxlength))}")(logging = logger)
             applicationError(JsString(truncatedResponse(str, length, maxlength)), Some(length.toBytes.toInt))
         }
 
       case Left(_: MemoryExhausted) =>
+        transid.failed(this, start, s"Run failed with memoryExhausted")(logging = logger)
         developerError(memoryExhausted)
 
       case Left(e) =>
         // This indicates a terminal failure in the container (it exited prematurely).
+        transid.failed(this, start, s"Run failed with abnormalRun")(logging = logger)
         developerError(abnormalRun)
     }
   }
