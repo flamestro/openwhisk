@@ -452,9 +452,17 @@ object LoggingMarkers {
   val INVOKER_ACTIVATION_RUN =
     LogMarkerToken(invoker, "activationRun", start)(MeasurementUnit.time.milliseconds)
 
+  // Used to trace if application side result is successful
+  val INVOKER_ACTIVATION_RUN_INTERPRET =
+    LogMarkerToken(invoker, "activationRunInterpretation", start)(MeasurementUnit.time.milliseconds)
+
   // Time that is needed to init the action
   val INVOKER_ACTIVATION_INIT =
     LogMarkerToken(invoker, "activationInit", start)(MeasurementUnit.time.milliseconds)
+
+  // Used to trace if application side result is successful
+  val INVOKER_ACTIVATION_INIT_INTERPRET =
+    LogMarkerToken(invoker, "activationInitInterpretation", start)(MeasurementUnit.time.milliseconds)
 
   // Time needed to collect the logs
   val INVOKER_COLLECT_LOGS =

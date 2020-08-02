@@ -139,8 +139,7 @@ class OpenTracer(val tracer: Tracer, tracingConfig: TracingConfig, ticker: Ticke
   }
 
   private def setErrorTags(span: Span, message: => String): Unit = {
-    span.setTag("error", true)
-    span.setTag("message", message)
+    span.setTag("error", message)
   }
 
   private def configureCache[T, R](): collection.concurrent.Map[T, R] =
